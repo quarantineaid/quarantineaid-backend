@@ -202,7 +202,7 @@ Additionally to trying out this application locally, you can deploy it to a vari
 
   
 
-This project is open source and welcomes contributions. All contributions are subject to our [Code of Conduct](.github/blob/master/CODE_OF_CONDUCT.md).
+This project is open source and welcomes contributions. All contributions are subject to our [Code of Conduct](https://github.com/solancer/quarantineaid-backend/blob/master/.github/CODE_OF_CONDUCT.md).
 
   
 
