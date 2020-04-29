@@ -5,7 +5,7 @@
 
 </a>
 
-# Quarantine Aid - NodeJS Backend
+# Quarantine Aid - ExpressJS Backend
   
 
 ## About
