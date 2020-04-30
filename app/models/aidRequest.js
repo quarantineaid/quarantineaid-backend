@@ -44,36 +44,28 @@ const AidRequestSchema = new mongoose.Schema(
       index: true
     },
     volunteers: {
-      acceptedByRequester: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User'
-        }
-      ],
+      acceptedByRequester: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
       acceptedByVolunteer: [
         {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'User'
         }
       ],
-      resolvedByRequester: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User'
-        }
-      ],
-      resolvedByVolunteer: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User'
-        }
-      ],
-      rejectedByVolunteer: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'User'
-        }
-      ],
+      resolvedByRequester: {
+        type: Boolean,
+        default: false
+      },
+      resolvedByVolunteer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      rejectedByVolunteer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
       rejectedByRequester: [
         {
           type: mongoose.Schema.Types.ObjectId,
@@ -94,6 +86,10 @@ const AidRequestSchema = new mongoose.Schema(
     phone: {
       type: String,
       required: true
+    },
+    sharedContact: {
+      type: Number,
+      default: 0
     },
     status: {
       type: String,

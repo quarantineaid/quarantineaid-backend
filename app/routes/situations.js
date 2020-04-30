@@ -47,6 +47,16 @@ router.get(
 )
 
 /*
+ * get all volunteer situations
+ */
+router.get(
+  '/helping/helped',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.helpedSituations
+)
+
+/*
  * Fetch a particluar helping/situations
  */
 router.get(
@@ -74,6 +84,56 @@ router.post(
   authCheck.isAuthenticated(),
   trimRequest.all,
   controller.volunteerStatus
+)
+
+/*
+ * get all ongoing getting-help on situation
+ */
+router.get(
+  '/getting-help/ongoing',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.ghOnGoingSituations
+)
+
+/*
+ * get all pending getting-help on situation
+ */
+router.get(
+  '/getting-help/pending',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.ghPendingSituations
+)
+
+/*
+ * get all pending getting-help on situation
+ */
+router.get(
+  '/getting-help/resolved',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.ghResolvedSituations
+)
+
+/*
+ * get all pending getting-help on situation
+ */
+router.post(
+  '/getting-help/accept',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.acceptHelp
+)
+
+/*
+ * get all pending getting-help on situation
+ */
+router.post(
+  '/getting-help/status',
+  authCheck.isAuthenticated(),
+  trimRequest.all,
+  controller.acceptedhelpStatus
 )
 
 module.exports = router

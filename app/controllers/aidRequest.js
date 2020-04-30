@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 const model = require('../models/aidRequest')
+const user = require('../models/user')
 const path = require('path')
 const utils = require('../middleware/utils')
 const db = require('../middleware/db')
@@ -7,6 +8,7 @@ const aws = require('aws-sdk')
 const multer = require('multer')
 const multerS3 = require('multer-s3')
 const util = require('util')
+const { sendSms } = require('../middleware/sms')
 
 aws.config.update({
   accessKeyId: process.env.S3_BUCKET_CLIENT,
@@ -160,6 +162,7 @@ exports.onGoingSituations = async (req, res) => {
     }
     query.requester = { $ne: req.user.id }
     query['volunteers.acceptedByVolunteer'] = req.user.id
+    query['volunteers.resolvedByVolunteer'] = { $ne: req.user.id }
     const options = {
       populate: 'volunteers.acceptedByVolunteer'
     }
@@ -186,6 +189,33 @@ exports.pendingSituations = async (req, res) => {
     }
     query.requester = { $ne: req.user.id }
     query['volunteers.resolvedByVolunteer'] = req.user.id
+    const options = {
+      populate: 'volunteers.resolvedByVolunteer'
+    }
+    res.status(200).json(await db.getItems(req, model, query, options))
+    return
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+/**
+ * Get all pending/volunteered situations function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.helpedSituations = async (req, res) => {
+  try {
+    const query = {}
+    if (req.query.type) {
+      query.type = req.query.type.split(',')
+    }
+    if (req.query.city) {
+      query['geojson.properties.city'] = req.query.city
+    }
+    query.requester = { $ne: req.user.id }
+    query['volunteers.acceptedByRequester'] = req.user.id
+    query['volunteers.resolvedByRequester'] = true
     const options = {
       populate: 'volunteers.resolvedByVolunteer'
     }
@@ -234,10 +264,7 @@ exports.volunteerStatus = async (req, res) => {
         'volunteers.rejectedByVolunteer': req.user.id
       }
     }
-    const pushVolunteer = {
-      $push: setVolunteer
-    }
-    res.status(200).json(await db.updateItem(situationId, model, pushVolunteer))
+    res.status(200).json(await db.updateItem(situationId, model, setVolunteer))
   } catch (error) {
     utils.handleError(res, error)
   }
@@ -287,6 +314,169 @@ exports.deleteSituation = async (req, res) => {
   try {
     const id = await utils.isIDGood(req.body.situationid)
     res.status(200).json(await db.deleteItem(id, model))
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+/**
+ * Get all getting help ongoing situations function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.ghOnGoingSituations = async (req, res) => {
+  try {
+    const query = {}
+    if (req.query.type) {
+      query.type = req.query.type.split(',')
+    }
+    if (req.query.city) {
+      query['geojson.properties.city'] = req.query.city
+    }
+    query.requester = req.user.id
+    query['volunteers.acceptedByVolunteer'] = {
+      $exists: true,
+      $ne: []
+    }
+    query['volunteers.acceptedByRequester'] = { $exists: false }
+    const options = {
+      populate: 'volunteers.acceptedByVolunteer'
+    }
+    res.status(200).json(await db.getItems(req, model, query, options))
+    return
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+/**
+ * Get all getting help pending situations function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.ghPendingSituations = async (req, res) => {
+  try {
+    const query = {}
+    if (req.query.type) {
+      query.type = req.query.type.split(',')
+    }
+    if (req.query.city) {
+      query['geojson.properties.city'] = req.query.city
+    }
+    query.requester = req.user.id
+    query['volunteers.acceptedByRequester'] = { $exists: true }
+    query['volunteers.resolvedByRequester'] = false
+    const options = {
+      populate: 'volunteers.acceptedByVolunteer'
+    }
+    res.status(200).json(await db.getItems(req, model, query, options))
+    return
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+/**
+ * Get all getting help resolved situations function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.ghResolvedSituations = async (req, res) => {
+  try {
+    const query = {}
+    if (req.query.type) {
+      query.type = req.query.type.split(',')
+    }
+    if (req.query.city) {
+      query['geojson.properties.city'] = req.query.city
+    }
+    query.requester = req.user.id
+    query['volunteers.acceptedByRequester'] = { $exists: true }
+    query['volunteers.resolvedByRequester'] = true
+    const options = {
+      populate: 'volunteers.acceptedByVolunteer'
+    }
+    res.status(200).json(await db.getItems(req, model, query, options))
+    return
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+const shareNumber = async (volunteer, requester) => {
+  const volunteerDetails = await user.findById(volunteer).select('+phone +name')
+  const requesterDetails = await user.findById(requester).select('+phone +name')
+  sendSms({
+    message: `You can reach ${volunteerDetails.name} at ${volunteerDetails.phone} - Quarantine Aid team`,
+    phone: `+${requesterDetails.phone}`
+  })
+  sendSms({
+    message: `You can reach ${requesterDetails.name} at ${requesterDetails.phone} - Quarantine Aid team`,
+    phone: `+${volunteerDetails.phone}`
+  })
+}
+
+/**
+ * Accept help of an aid request function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.acceptHelp = async (req, res) => {
+  try {
+    const situationId = await utils.isIDGood(req.body.situationId)
+    const volunteerId = await utils.isIDGood(req.body.volunteer)
+    model.findById(situationId, async (err, situation) => {
+      if (err) {
+        console.log(err)
+      }
+      if (situation.requester.toString() === req.user.id.toString()) {
+        const acceptHelpFrom = {
+          'volunteers.acceptedByRequester': volunteerId
+        }
+        shareNumber(volunteerId, req.user.id)
+        res
+          .status(200)
+          .json(await db.updateItem(situationId, model, acceptHelpFrom))
+      } else {
+        res.status(400).json({ err: 'Situation does not belong to user' })
+      }
+    })
+  } catch (error) {
+    utils.handleError(res, error)
+  }
+}
+
+/**
+ * Accepted help status set of an aid request function called by route
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ */
+exports.acceptedhelpStatus = async (req, res) => {
+  try {
+    const situationId = await utils.isIDGood(req.body.situationId)
+    model.findById(situationId).exec(async (err, situation) => {
+      if (err) {
+        console.error(err)
+        res.status(400).json({ err: 'db error' })
+      }
+      if (situation.requester.toString() === req.user.id.toString()) {
+        let SetRequestStatus = {}
+        if (req.body.resolved === true) {
+          SetRequestStatus = {
+            'volunteers.resolvedByRequester': true
+          }
+        } else if (req.body.resolved === false) {
+          SetRequestStatus = {
+            'volunteers.rejectedByRequester': false
+          }
+        }
+        res
+          .status(200)
+          .json(await db.updateItem(situationId, model, SetRequestStatus))
+      } else {
+        res.status(400).json({ err: 'Situation does not belong to user' })
+      }
+    })
   } catch (error) {
     utils.handleError(res, error)
   }

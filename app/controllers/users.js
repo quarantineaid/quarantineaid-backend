@@ -66,7 +66,6 @@ exports.verifyPhone = async (req, res) => {
           })
           return true
         })
-      console.log(`userCheck ${userCheck}`)
       // Check if user is spamming
       if (userCheck) {
         otpResp = await sendSms({
