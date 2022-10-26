@@ -61,7 +61,7 @@
     "trim-request": "^1.0.6",
     "twilio": "^3.42.2",
     "uuid": "^7.0.2",
-    "validator": "^13.0.0"
+    "validator": "^13.7.0"
   },
   "devDependencies": {
     "chai": "^4.2.0",
