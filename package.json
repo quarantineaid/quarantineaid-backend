@@ -32,7 +32,7 @@
     "cross-env": "latest",
     "date-fns": "^2.11.1",
     "dotenv-safe": "^8.2.0",
-    "ejs": "^3.0.2",
+    "ejs": "^3.1.7",
     "expeditious-engine-redis": "^0.1.2",
     "express": "^4.17.1",
     "express-expeditious": "^5.1.1",
